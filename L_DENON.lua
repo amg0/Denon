@@ -266,14 +266,22 @@ end
 local function startEngine(lul_device)
 	debug(string.format("startEngine(%s)",lul_device))
 	local success =  false
+	local res,msg = nil,''
 	lul_device = tonumber(lul_device)
 	local ipaddr = luup.attr_get ('ip', lul_device )
+	
 	if (isempty(ipaddr) == false) then
 		local denon = Denon:new(ipaddr)
+		res,msg = denon:connect()
+		if (res~=nil) then
+			denon:disconnect()
+		else
+			warning(string.format("connection failed with err:%s",msg))
+		end
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
-	return success
+	return (res~=nil)
 end
 
 function startupDeferred(lul_device)
