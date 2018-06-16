@@ -11,24 +11,18 @@ local DENON_SERVICE	= "urn:upnp-org:serviceId:altdenon1"
 local devicetype	= "urn:schemas-upnp-org:device:altdenon:1"
 -- local this_device	= nil
 local DEBUG_MODE	= false -- controlled by UPNP action
-local version		= "v0.4"
+local version		= "v0.1"
 local JSON_FILE = "D_DENON.json"
 local UI7_JSON_FILE = "D_DENON_UI7.json"
 
 local json = require("dkjson")
-local mime = require('mime')
+-- local mime = require('mime')
 local socket = require("socket")
-local http = require("socket.http")
-local https = require ("ssl.https")
-local ltn12 = require("ltn12")
-local modurl = require ("socket.url")
+-- local http = require("socket.http")
+-- local https = require ("ssl.https")
+-- local ltn12 = require("ltn12")
+-- local modurl = require ("socket.url")
 
-local vartable = {
-	"urn:micasaverde-com:serviceId:SecuritySensor1,Tripped=0",
-	"urn:micasaverde-com:serviceId:SecuritySensor1,Armed=0"
-}
-
-local active_target = 0 -- 0 to modulo targets length
 
 ------------------------------------------------
 -- Debug --
@@ -135,18 +129,6 @@ local function setAttrIfChanged(name, value, deviceId)
   return value
 end
 
-local function getIP()
-  -- local stdout = io.popen("GetNetworkState.sh ip_wan")
-  -- local ip = stdout:read("*a")
-  -- stdout:close()
-  -- return ip
-  local mySocket = socket.udp ()
-  mySocket:setpeername ("42.42.42.42", "424242")  -- arbitrary IP/PORT
-  local ip = mySocket:getsockname ()
-  mySocket: close()
-  return ip or "127.0.0.1"
-end
-
 ------------------------------------------------
 -- Tasks
 ------------------------------------------------
@@ -193,138 +175,6 @@ local function UserMessage(text, mode)
   task(text,mode)
 end
 
-------------------------------------------------
--- LUA Utils
-------------------------------------------------
-local function Split(str, delim, maxNb)
-  -- Eliminate bad cases...
-  if string.find(str, delim) == nil then
-	return { str }
-  end
-  if maxNb == nil or maxNb < 1 then
-	maxNb = 0	 -- No limit
-  end
-  local result = {}
-  local pat = "(.-)" .. delim .. "()"
-  local nb = 0
-  local lastPos
-  for part, pos in string.gmatch(str, pat) do
-	nb = nb + 1
-	result[nb] = part
-	lastPos = pos
-	if nb == maxNb then break end
-  end
-  -- Handle the last field
-  if nb ~= maxNb then
-	result[nb + 1] = string.sub(str, lastPos)
-  end
-  return result
-end
-
--- function string:split(sep) -- from http://lua-users.org/wiki/SplitJoin	 : changed as consecutive delimeters was not returning empty strings
-  -- return Split(self, sep)
--- end
-
-function string:template(variables)
-  return (self:gsub('@(.-)@',
-	function (key)
-	  return tostring(variables[key] or '')
-	end))
-end
-
-function string:trim()
-  return self:match "^%s*(.-)%s*$"
-end
-
-local function tablelength(T)
-  local count = 0
-  if (T~=nil) then
-  for _ in pairs(T) do count = count + 1 end
-  end
-  return count
-end
-
-
-------------------------------------------------------------------------------------------------
--- Http handlers : Communication FROM ALTUI
--- http://192.168.1.5:3480/data_request?id=lr_DENON_Handler&command=xxx
--- recommended settings in ALTUI: PATH = /data_request?id=lr_DENON_Handler&mac=$M&deviceID=114
-------------------------------------------------------------------------------------------------
-function getDevicesStatus(lul_device)
-	debug( string.format("getDevicesStatus(%s)",lul_device))
-	local js = luup.variable_get(DENON_SERVICE, "Targets", lul_device)
-	local targets = json.decode(js)
-	local result = {}
-	local count = 0
-	for k,device_def in pairs(targets) do
-		local lul_child,device = findChild( lul_device, 'child_'.. device_def.ipaddr )
-		local tripped = luup.variable_get('urn:micasaverde-com:serviceId:SecuritySensor1', 'Tripped', lul_child)
-		if (tripped=="1") then
-			count = count +1 
-		end
-		table.insert(result, {
-			name = device_def.name,
-			ipaddr = device_def.ipaddr,
-			tripped = tripped
-		})
-	end
-	setVariableIfChanged(DENON_SERVICE, "DevicesStatus", json.encode(result), lul_device)
-	setVariableIfChanged(DENON_SERVICE, "DevicesOfflineCount", count, lul_device)
-	return result
-end
-
-local function switch( command, actiontable)
-  -- check if it is in the table, otherwise call default
-  if ( actiontable[command]~=nil ) then
-	return actiontable[command]
-  end
-  warning("DENON_Handler:Unknown command received:"..command.." was called. Default function")
-  return actiontable["default"]
-end
-
-function myDENON_Handler(lul_request, lul_parameters, lul_outputformat)
-  debug('myDENON_Handler: request is: '..tostring(lul_request))
-  debug('myDENON_Handler: parameters is: '..json.encode(lul_parameters))
-  local lul_html = "";	-- empty return by default
-  local mime_type = "";
-  -- if (hostname=="") then
-	-- hostname = getIP()
-	-- debug("now hostname="..hostname)
-  -- end
-
-  -- find a parameter called "command"
-  if ( lul_parameters["command"] ~= nil ) then
-	command =lul_parameters["command"]
-  else
-	  debug("DENON_Handler:no command specified, taking default")
-	command ="default"
-  end
-
-  local deviceID = tonumber( lul_parameters["DeviceNum"] ) -- or findTHISDevice() )
-
-  -- switch table
-  local action = {
-
-	  ["default"] =
-	  function(params)
-		return "default handler / not successful", "text/plain"
-	  end,
-
-	  ["getStatus"]= 
-	  function(params)
-		local res = getDevicesStatus(deviceID)
-		local str = json.encode(res)
-		debug( string.format("result=%s", str) )
-		return str,"application/json"
-	  end
-  }
-  -- actual call
-  lul_html , mime_type = switch(command,action)(lul_parameters)
-  if (command ~= "home") and (command ~= "oscommand") then
-	debug(string.format("lul_html:%s",lul_html or ""))
-  end
-  return (lul_html or "") , mime_type
-end
 
 ------------------------------------------------
 -- UPNP Actions Sequence
@@ -340,113 +190,15 @@ local function setDebugMode(lul_device,newDebugMode)
 	DEBUG_MODE=false
   end
 end
+
 ------------------------------------------------
 -- UPNP actions Sequence
 ------------------------------------------------
-local function UserSetArmed(lul_device,newArmedValue)
-	debug(string.format("UserSetArmed(%s,%s)",lul_device,newArmedValue))
-	lul_device = tonumber(lul_device)
-	newArmedValue = tonumber(newArmedValue)
-	return luup.variable_set("urn:micasaverde-com:serviceId:SecuritySensor1", "Armed", newArmedValue, lul_device)
-end
-
-function pingDevice(device_def)
-	debug(string.format("pingDevice(%s) %s",device_def.ipaddr,"ping -c 1 -w 3 " .. device_def.ipaddr))
-	local returnCode = os.execute("ping -c 1 -w 3 " .. device_def.ipaddr) 
-	return (returnCode == 0)	-- 0 is good,  other is failure
-end
-
-function httpDevice(device_def)
-	debug(string.format("httpDevice(%s)",device_def.ipaddr))
-	local newUrl = string.format("http://%s/%s",device_def.ipaddr,device_def.page)
-	debug(string.format("GET url %s",newUrl))
-	local code,data,httpcode = luup.inet.wget(newUrl,10)
-	debug(string.format("wget %s returned code:%s httpcode:%s data:%s",newUrl,code, httpcode,string.sub(data or "",1,100) ))
-	-- 0 or 401 are fine, it means http responded so the device is online
-	-- on vera, a 401 return could create a httpcode == -1 but data contains something
-	if ((code==0) or (httpcode==200) or (httpcode==302) or (httpcode==401) or (httpcode==403) ) then
-		return true
-	end
-	warning(string.format("failed to wget to %s, http.request returned %d", newUrl,httpcode))
-	return false
-end
-
-local discovery_func = {
-	["ping"] = pingDevice,
-	["http"] = httpDevice,	
-}
-
-local function refreshOneDevice(lul_device,device_def)
-	debug(string.format("refreshOneDevice(%s,%s)",lul_device,json.encode(device_def)))
-	local success = false
-	if (device_def ~= nil) then
-		success = (discovery_func[ device_def.type ])(device_def) 
-		if (success==false) then
-			warning(string.format("Device %s did not respond properly to %s probe",device_def.ipaddr,json.encode(device_def)))
-		else
-			debug("success")
-		end
-		-- todo
-		local lul_child,device = findChild( lul_device, 'child_'.. device_def.ipaddr )
-		setVariableIfChanged('urn:micasaverde-com:serviceId:SecuritySensor1', 'Tripped', (success==false) and "1" or "0", lul_child)
-	end
-	return success
-end
-
-function refreshDevices(lul_device,no_refresh)
-	debug(string.format("refreshDevices(%s)",lul_device))
-	lul_device = tonumber(lul_device)
-	norefresh = norefresh or false
-	local js = luup.variable_get(DENON_SERVICE, "Targets", lul_device)
-	local targets = json.decode(js)
-	local success = refreshOneDevice(lul_device, targets[ active_target+1 ])
-	active_target = (active_target+1) % #targets
-
-	-- refresh stats
-	getDevicesStatus(lul_device)
-
-	if (norefresh==false) then
-		local period  = getSetVariable(DENON_SERVICE, "PollRate", lul_device, 10)
-		period = tonumber(period)
-		debug(string.format("programming next refreshDevices(%s) in %s sec",lul_device,period))
-		luup.call_delay("refreshDevices",period,tostring(lul_device))
-	end
-	return true	-- would be false if there is an error, but a failed discovery device is not an error
-end
-
-local function SyncDevices(lul_device)	 
-	debug(string.format("SyncDevices(%s)",lul_device))
-	local js = luup.variable_get(DENON_SERVICE, "Targets", lul_device)
-	local targets = json.decode(js)
-	debug(string.format("Devices to Monitor: %s",js))
-	if (targets~=nil) then
-		local child_devices = luup.chdev.start(lul_device);
-		for k,v in pairs(targets) do
-			local idx = tonumber(k)
-			luup.chdev.append(
-				lul_device, child_devices,
-				'child_'..v.ipaddr,			-- altid
-				v.name,						-- device name
-				'urn:schemas-micasaverde-com:device:MotionSensor:1',				-- children device type
-				'D_MotionSensor1.xml',		-- children D-file
-				"", 						-- children I-file
-				table.concat(vartable, "\n"),			-- params
-				true,						-- not embedded
-				false						-- invisible
-			)
-		end
-		luup.chdev.sync(lul_device, child_devices)	
-	else
-		error(string.format("empty targets or bad json format:%s",js))
-		return false
-	end
-	return true
-end
 
 local function startEngine(lul_device)
 	debug(string.format("startEngine(%s)",lul_device))
 	lul_device = tonumber(lul_device)
-	local success =  SyncDevices(lul_device) and refreshDevices(lul_device)
+	local success =  false
 	return success
 end
 
@@ -454,28 +206,13 @@ function startupDeferred(lul_device)
 	lul_device = tonumber(lul_device)
 	log("startupDeferred, called on behalf of device:"..lul_device)
 
-	local debugmode = getSetVariable(DENON_SERVICE, "Debug", lul_device, "0")
-	local oldversion = getSetVariable(DENON_SERVICE, "Version", lul_device, "")
-	local pollrate = getSetVariable(DENON_SERVICE, "PollRate", lul_device, 10)
-	local targets = getSetVariable(DENON_SERVICE, "Targets", lul_device, "[]")
-	local ds = getSetVariable(DENON_SERVICE, "DevicesStatus", lul_device, "[]")
-	local dsc = getSetVariable(DENON_SERVICE, "DevicesOfflineCount", lul_device, 0)
-
-	local types = {}
-	for k,v in pairs(discovery_func) do
-		table.insert(types,k)
-	end
-	setVariableIfChanged(DENON_SERVICE, "Types", json.encode(types), lul_device)
-	
-	-- local zz = getSetVariable(DENON_SERVICE, "Targets", lul_device, "")
-	
+	local debugmode = getSetVariable(DENON_SERVICE, "Debug", lul_device, "0")	
 	if (debugmode=="1") then
 		DEBUG_MODE = true
 		UserMessage("Enabling debug mode for device:"..lul_device,TASK_BUSY)
 	end
-	local major,minor = 0,0
-	local tbl={}
 
+	local major,minor = 0,0
 	if (oldversion~=nil) then
 		if (oldversion ~= "") then
 		  major,minor = string.match(oldversion,"v(%d+)%.(%d+)")
@@ -496,8 +233,6 @@ function startupDeferred(lul_device)
 		luup.variable_set(DENON_SERVICE, "Version", version, lul_device)
 	end
 
-	luup.register_handler('myDENON_Handler','DENON_Handler')
-	
 	local success = startEngine(lul_device)
 
 	-- report success or failure
