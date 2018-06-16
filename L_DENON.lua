@@ -175,6 +175,74 @@ local function UserMessage(text, mode)
   task(text,mode)
 end
 
+------------------------------------------------
+-- DENON plugin methods
+------------------------------------------------
+Denon = {
+	new = function(self,ipaddr)
+	  debug(string.format("Denon:new(%s)",ipaddr))
+		o = {
+			ipaddr = ipaddr,
+			port = 23,
+			socket = nil,
+		}
+		setmetatable(o, self)
+		self.__index = self
+		return o
+	end,
+	connect = function(self)
+		debug(string.format("Denon:connect()"))
+		local result, err = nil, ''
+		if ( self.socket == nil ) then
+			self.socket, err = socket.tcp()
+			if (self.socket~=nil) then
+				self.socket:settimeout(5)
+				result, err = self.socket:connect(self.ipaddr, self.port)
+				if (result==nil) then
+					self.socket:close()
+					self.socket = nil
+				end
+			end
+		end
+		return result,err
+	end,
+	receive = function(self)
+		debug(string.format("Denon:receive()"))
+		local str=''
+		local err=''
+		local result = 1
+		while (result~='\r') do
+			result,err = c:receive("1")
+			if (result==nil) then
+				error(string.format("err:%s",err))
+				break
+			end
+			str = str..result
+		end
+		debug(string.format("received:",str))
+		return str,err
+	end,
+	send = function(self,frame)
+		debug(string.format("Denon:send(%s)",frame))
+		local result,err = nil, ''
+		if (self.sock ~= nil) then
+			result,err = self.sock:send( frame .. "\r" )	-- effectively the total number of bytes sent
+			if (result ~= nil) then
+				result,err = Denon:receive()
+			end
+		end
+		return result,err
+	end,
+	disconnect = function(self)
+		debug(string.format("Denon:disconnect()"))
+		if (self.socket ~= nil) then
+			self.socket:shutdown('both')
+			self.socket:close()
+			self.socket = nil
+		end
+		return nil
+	end,
+}
 
 ------------------------------------------------
 -- UPNP Actions Sequence
@@ -197,8 +265,14 @@ end
 
 local function startEngine(lul_device)
 	debug(string.format("startEngine(%s)",lul_device))
-	lul_device = tonumber(lul_device)
 	local success =  false
+	lul_device = tonumber(lul_device)
+	local ipaddr = luup.attr_get ('ip', lul_device )
+	if (isempty(ipaddr) == false) then
+		local denon = Denon:new(ipaddr)
+	else
+		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
+	end
 	return success
 end
 
