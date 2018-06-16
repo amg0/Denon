@@ -2,7 +2,32 @@
   "flashicon": "https://cdn.rawgit.com/amg0/NetMonitor/dcd703ca/iconDENON.png",
   "default_icon": "https://cdn.rawgit.com/amg0/NetMonitor/dcd703ca/iconDENON.png",
   "halloIconsDir": "pics\/hallo",
-
+  "state_icons": [
+    "iconALTHUE_0.png",
+    "iconALTHUE_100.png",
+	{
+		"img": "https://cdn.rawgit.com/amg0/ALTHue/bfa548bc/iconDENON_0.png",
+		"conditions": [
+			{
+				"service": "urn:upnp-org:serviceId:altdenon1",
+				"variable": "IconCode",
+				"operator": "==",
+				"value": 0
+			}
+		]
+	},
+	{
+		"img": "https://cdn.rawgit.com/amg0/ALTHue/bfa548bc/iconDENON_100.png",
+		"conditions": [
+			{
+				"service": "urn:upnp-org:serviceId:altdenon1",
+				"variable": "IconCode",
+				"operator": "==",
+				"value": 100
+			}
+		]
+	}
+  ],
   "x": "2",
   "y": "4",
   "inScene": "1",

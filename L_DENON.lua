@@ -205,6 +205,7 @@ end
 function startupDeferred(lul_device)
 	lul_device = tonumber(lul_device)
 	log("startupDeferred, called on behalf of device:"..lul_device)
+	local iconCode = getSetVariable(DENON_SERVICE,"IconCode", lul_device, "0")
 
 	local debugmode = getSetVariable(DENON_SERVICE, "Debug", lul_device, "0")	
 	if (debugmode=="1") then
@@ -234,7 +235,8 @@ function startupDeferred(lul_device)
 	end
 
 	local success = startEngine(lul_device)
-
+	setVariableIfChanged(DENON_SERVICE, "IconCode", success and "100" or "0", lul_device)
+	
 	-- report success or failure
 	if( luup.version_branch == 1 and luup.version_major == 7) then
 		if (success == true) then
