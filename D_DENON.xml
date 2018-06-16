@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:altdenon:1</deviceType>
+    <staticJson>D_DENON.json</staticJson> 
+    <friendlyName>DENON</friendlyName>
+    <manufacturer>Amg0</manufacturer>
+    <manufacturerURL>http://www.google.fr/</manufacturerURL>
+    <modelDescription>DENON for Vera UI7</modelDescription>
+    <modelName>DENON for Vera UI7</modelName>
+    <modelNumber>1</modelNumber>
+    <protocol>cr</protocol>
+	<handleChildren>1</handleChildren>
+	<serviceList>
+      <service>
+        <serviceType>urn:schemas-upnp-org:service:altdenon:1</serviceType>
+        <serviceId>urn:upnp-org:serviceId:altdenon1</serviceId>
+        <controlURL>/upnp/control/DENON1</controlURL>
+        <eventSubURL>/upnp/event/DENON1</eventSubURL>
+        <SCPDURL>S_DENON.xml</SCPDURL>
+      </service>
+	</serviceList>
+    <implementationList>
+      <implementationFile>I_DENON.xml</implementationFile>
+    </implementationList>
+  </device>
+</root>
+ 

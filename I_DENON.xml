@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<implementation>
+  <functions>
+  </functions>
+  <files>L_DENON.lua</files>
+  <startup>initstatus</startup>
+  <actionList>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:altdenon1</serviceId>
+			<name>SetDebug</name>
+			<job>
+			setDebugMode(lul_device,lul_settings.newDebugMode)
+			return 4,0
+			</job>
+		</action>
+		         
+	</actionList>
+</implementation>
