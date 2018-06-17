@@ -210,25 +210,34 @@ Denon = {
 		debug(string.format("Denon:receive()"))
 		local str=''
 		local err=''
-		local result = 1
-		while (result~='\r') do
-			result,err = c:receive("1")
-			if (result==nil) then
-				error(string.format("err:%s",err))
-				break
+		if (self.socket ~= nil) then
+			local result = 1
+			while (result~='\r') do
+				result,err = self.socket:receive("1")
+				if (result==nil) then
+					error(string.format("receive err:%s",err))
+					break
+				end
+				str = str..result
 			end
-			str = str..result
+			debug(string.format("received:",str))
+		else
+			error(string.format("socket not connected"))
 		end
-		debug(string.format("received:",str))
 		return str,err
 	end,
 	send = function(self,frame)
 		debug(string.format("Denon:send(%s)",frame))
 		local result,err = nil, ''
-		if (self.sock ~= nil) then
-			result,err = self.sock:send( frame .. "\r" )	-- effectively the total number of bytes sent
+		if (self.socket ~= nil) then
+			result,err = self.socket:send( frame .. "\r" )	-- effectively the total number of bytes sent
+			debug(string.format("send returned %s",result or 'nil'))
 			if (result ~= nil) then
-				result,err = Denon:receive()
+				luup.sleep(100)
+				local received =''
+				received,err = self:receive()
+			else
+				error(string.format("send failed, err:%s",err))
 			end
 		end
 		return result,err
@@ -274,6 +283,7 @@ local function startEngine(lul_device)
 		local denon = Denon:new(ipaddr)
 		res,msg = denon:connect()
 		if (res~=nil) then
+			res,msg = denon:send("PW?")		-- query source
 			denon:disconnect()
 		else
 			warning(string.format("connection failed with err:%s",msg))
