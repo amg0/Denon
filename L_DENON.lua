@@ -23,6 +23,8 @@ local socket = require("socket")
 -- local ltn12 = require("ltn12")
 -- local modurl = require ("socket.url")
 
+local targets = {}
+local this_device = nil
 
 ------------------------------------------------
 -- Debug --
@@ -176,6 +178,64 @@ local function UserMessage(text, mode)
 end
 
 ------------------------------------------------
+-- Generic Queue
+------------------------------------------------
+function tablelength(T)
+  local count = 0
+  if (T~=nil) then
+	for _ in pairs(T) do count = count + 1 end
+  end
+  return count
+end
+Queue = {
+	new = function(self,o)
+		o = o or {}	  -- create object if user does not provide one
+		setmetatable(o, self)
+		self.__index = self
+		return o
+	end,
+	size = function(self)
+		return tablelength(self)
+	end,
+	push = function(self,e)
+		return table.insert(self,1,e)
+	end,
+	pull = function(self)
+	    local elem = self[1]
+		table.remove(self,1)
+		return elem
+	end,
+	add = function(self,e)
+		return table.insert(self,e)
+	end,
+	removeItem = function(self, idx)
+		table.remove(self,idx)
+	end,
+	getHead = function(self)
+		local elem = self[1]
+		return elem
+	end,
+	list = function(self)
+		local i = 0
+		return function()
+			if (i<#self) then
+				i=i+1
+				return i,self[i]
+			end
+		end
+	end,
+	listReverse = function(self)
+		local i = #self
+		return function()
+			if (i>0) then
+				local j = i
+				i = i-1
+				return j,self[j]
+			end
+		end
+	end,
+}
+------------------------------------------------
 -- DENON plugin methods
 ------------------------------------------------
 Denon = {
@@ -185,6 +245,7 @@ Denon = {
 			ipaddr = ipaddr,
 			port = 23,
 			socket = nil,
+			queue = Queue:new()
 		}
 		setmetatable(o, self)
 		self.__index = self
@@ -206,8 +267,8 @@ Denon = {
 		end
 		return result,err
 	end,
-	receive = function(self)
-		debug(string.format("Denon:receive()"))
+	_receiveFrame = function(self)
+		debug(string.format("Denon:_receiveFrame()"))
 		local str=''
 		local err=''
 		if (self.socket ~= nil) then
@@ -226,16 +287,16 @@ Denon = {
 		end
 		return str,err
 	end,
-	send = function(self,frame)
-		debug(string.format("Denon:send(%s)",frame))
+	_sendFrame = function(self,frame)
+		debug(string.format("Denon:_sendFrame(%s)",frame))
 		local result,err = nil, ''
 		if (self.socket ~= nil) then
 			result,err = self.socket:send( frame .. "\r" )	-- effectively the total number of bytes sent
 			debug(string.format("send returned %s",result or 'nil'))
 			if (result ~= nil) then
-				-- luup.sleep(100)
+				luup.sleep(100)
 				local received =''
-				received,err = self:receive()
+				received,err = self:_receiveFrame()
 			else
 				error(string.format("send failed, err:%s",err))
 			end
@@ -251,7 +312,50 @@ Denon = {
 		end
 		return nil
 	end,
+	_engine = function(self)
+		debug(string.format("Denon:_engine()"))
+		local size = self.queue:size()
+		debug(string.format("queue size = %d",size))
+		if (size > 0) then
+			local result=''
+			repeat
+				local cmd = self.queue:pull()
+				local result,err = self:_sendFrame(cmd.frame)
+				size = self.queue:size()
+				debug(string.format("queue size = %d",size))
+			until ((size==0))  --or (result==nil) 
+			
+			-- size is 0 now, we can disconnect
+			self:disconnect()
+		end
+	end,
+	send = function(self,frame)
+		debug(string.format("Denon:send(%s)",frame))
+		self.queue:add({frame=frame})
+		local result,err = 1,''
+		local size = self.queue:size()
+		debug(string.format("queue size = %d",size))
+		if (size==1) then
+			result,err = self:connect()
+			if (result~=nil) then
+				luup.call_delay("SendEngine", 1, self.ipaddr)
+			else
+				error(string.format("connect to %s failed with err %s. engine will stop. reload luup",self.ipaddr,err))
+			end
+		end
+		return result,err
+	end,
 }
+
+function SendEngine(ipaddr)
+	debug(string.format("SendEngine(%s)",ipaddr))
+	local obj = targets[ipaddr]
+	if (obj~=nil) then
+		obj:_engine()
+	else
+		warning(string.format("address %s is unknown in targets",ipaddr))
+	end
+end
 
 ------------------------------------------------
 -- UPNP Actions Sequence
@@ -277,21 +381,18 @@ local function startEngine(lul_device)
 	local success =  false
 	local res,msg = nil,''
 	lul_device = tonumber(lul_device)
-	local ipaddr = luup.attr_get ('ip', lul_device )
-	
+
+	local ipaddr = luup.attr_get ('ip', lul_device )	
 	if (isempty(ipaddr) == false) then
-		local denon = Denon:new(ipaddr)
-		res,msg = denon:connect()
+		targets[ipaddr] = Denon:new(ipaddr)
+		res,msg = targets[ipaddr]:send("PW?")
 		if (res~=nil) then
-			res,msg = denon:send("PW?")		-- query power
-			res,msg = denon:send("SI?")		-- query source
-			denon:disconnect()
-		else
-			warning(string.format("connection failed with err:%s",msg))
+			res,msg = targets[ipaddr]:send("SI?")
 		end
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
+	
 	return (res~=nil)
 end
 
@@ -367,6 +468,7 @@ end
 
 function initstatus(lul_device)
   lul_device = tonumber(lul_device)
+  this_device = lul_device
   -- this_device = lul_device
   log("initstatus("..lul_device..") starting version: "..version)
   checkVersion(lul_device)
