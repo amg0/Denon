@@ -13,6 +13,13 @@
 			return 4,0
 			</job>
 		</action>
-		         
+		<action>
+			<serviceId>urn:upnp-org:serviceId:altdenon1</serviceId>
+			<name>SendCmd</name>
+			<job>
+			sendCmd(lul_device,lul_settings.newCmd)
+			return 4,0
+			</job>
+		</action>		         
 	</actionList>
 </implementation>

@@ -23,7 +23,7 @@ local socket = require("socket")
 -- local ltn12 = require("ltn12")
 -- local modurl = require ("socket.url")
 
-local targets = {}
+local ampli = nil
 local this_device = nil
 
 ------------------------------------------------
@@ -245,19 +245,39 @@ Denon = {
 			ipaddr = ipaddr,
 			port = 23,
 			socket = nil,
-			queue = Queue:new()
 		}
 		setmetatable(o, self)
 		self.__index = self
 		return o
 	end,
+	
+	receive = function(self)
+		debug(string.format("Denon:receive()"))
+		local result, err = nil, nil
+		if (self.socket == nil) then
+		    error(string.format("socket not connected"))
+		else
+		    local c = 1
+			while (c~='\r') do
+				c,err = self.socket:receive("1")
+				-- debug( string.format("char : %s %s",c or '',err or '' ) )
+				if (c==nil) then
+					break
+				end
+				result = (result or '')..c
+			end
+		end
+		debug(string.format("Denon:receive() => %s",result or 'nil'))
+        return result, err		
+	end,
+	
 	connect = function(self)
 		debug(string.format("Denon:connect()"))
-		local result, err = nil, ''
+		local result, err = nil, nil
 		if ( self.socket == nil ) then
 			self.socket, err = socket.tcp()
 			if (self.socket~=nil) then
-				self.socket:settimeout(5)
+				self.socket:settimeout(2)
 				result, err = self.socket:connect(self.ipaddr, self.port)
 				if (result==nil) then
 					self.socket:close()
@@ -265,44 +285,10 @@ Denon = {
 				end
 			end
 		end
+		--debug( result,err )
 		return result,err
 	end,
-	_receiveFrame = function(self)
-		debug(string.format("Denon:_receiveFrame()"))
-		local str=''
-		local err=''
-		if (self.socket ~= nil) then
-			local result = 1
-			while (result~='\r') do
-				result,err = self.socket:receive("1")
-				if (result==nil) then
-					error(string.format("receive err:%s",err))
-					break
-				end
-				str = str..result
-			end
-			debug(string.format("received:%s",str))
-		else
-			error(string.format("socket not connected"))
-		end
-		return str,err
-	end,
-	_sendFrame = function(self,frame)
-		debug(string.format("Denon:_sendFrame(%s)",frame))
-		local result,err = nil, ''
-		if (self.socket ~= nil) then
-			result,err = self.socket:send( frame .. "\r" )	-- effectively the total number of bytes sent
-			debug(string.format("send returned %s",result or 'nil'))
-			if (result ~= nil) then
-				luup.sleep(100)
-				local received =''
-				received,err = self:_receiveFrame()
-			else
-				error(string.format("send failed, err:%s",err))
-			end
-		end
-		return result,err
-	end,
+	
 	disconnect = function(self)
 		debug(string.format("Denon:disconnect()"))
 		if (self.socket ~= nil) then
@@ -312,50 +298,37 @@ Denon = {
 		end
 		return nil
 	end,
-	_engine = function(self)
-		debug(string.format("Denon:_engine()"))
-		local size = self.queue:size()
-		debug(string.format("queue size = %d",size))
-		if (size > 0) then
-			local result=''
-			repeat
-				local cmd = self.queue:pull()
-				local result,err = self:_sendFrame(cmd.frame)
-				size = self.queue:size()
-				debug(string.format("queue size = %d",size))
-			until ((size==0))  --or (result==nil) 
-			
-			-- size is 0 now, we can disconnect
-			self:disconnect()
+	
+	send = function(self,cmd)
+		debug(string.format("Denon:send( %s )",cmd))
+		local result, err = nil, nil
+		if (self.socket == nil) then
+		    error(string.format("socket not connected"))
+		else
+		    result,err = self.socket:send( cmd .. "\r" )
 		end
-	end,
-	send = function(self,frame)
-		debug(string.format("Denon:send(%s)",frame))
-		self.queue:add({frame=frame})
-		local result,err = 1,''
-		local size = self.queue:size()
-		debug(string.format("queue size = %d",size))
-		if (size==1) then
-			result,err = self:connect()
-			if (result~=nil) then
-				luup.call_delay("SendEngine", 1, self.ipaddr)
-			else
-				error(string.format("connect to %s failed with err %s. engine will stop. reload luup",self.ipaddr,err))
-			end
-		end
+		--debug( result,err )
 		return result,err
 	end,
+	
+	command = function(self,cmd)
+		debug(string.format("Denon:command( %s )",cmd))
+		local result, err = self:send(cmd)
+        if (result==nil) then
+            return nil,err
+        end
+		
+		local result_cmds = {}
+        while (result~=nil) do
+            result,err = self:receive()
+            --debug( result,err )
+            if (result~=nil) then
+                table.insert(result_cmds,result)
+            end
+        end
+		return table.concat(result_cmds, ","),err
+	end,
 }
-
-function SendEngine(ipaddr)
-	debug(string.format("SendEngine(%s)",ipaddr))
-	local obj = targets[ipaddr]
-	if (obj~=nil) then
-		obj:_engine()
-	else
-		warning(string.format("address %s is unknown in targets",ipaddr))
-	end
-end
 
 ------------------------------------------------
 -- UPNP Actions Sequence
@@ -372,6 +345,13 @@ local function setDebugMode(lul_device,newDebugMode)
   end
 end
 
+local function sendCmd(lul_device,newCmd)
+  lul_device = tonumber(lul_device)
+  newCmd = newCmd or ""
+  debug(string.format("sendCmd(%s,%s)",lul_device,newCmd))
+  return 
+end
+
 ------------------------------------------------
 -- UPNP actions Sequence
 ------------------------------------------------
@@ -379,16 +359,11 @@ end
 local function startEngine(lul_device)
 	debug(string.format("startEngine(%s)",lul_device))
 	local success =  false
-	local res,msg = nil,''
+	local res,err = nil,''
 	lul_device = tonumber(lul_device)
 
 	local ipaddr = luup.attr_get ('ip', lul_device )	
 	if (isempty(ipaddr) == false) then
-		targets[ipaddr] = Denon:new(ipaddr)
-		res,msg = targets[ipaddr]:send("PW?")
-		if (res~=nil) then
-			res,msg = targets[ipaddr]:send("SI?")
-		end
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
@@ -397,11 +372,13 @@ local function startEngine(lul_device)
 end
 
 function startupDeferred(lul_device)
-	lul_device = tonumber(lul_device)
 	log("startupDeferred, called on behalf of device:"..lul_device)
-	local iconCode = getSetVariable(DENON_SERVICE,"IconCode", lul_device, "0")
 
+	lul_device = tonumber(lul_device)
+	local iconCode = getSetVariable(DENON_SERVICE,"IconCode", lul_device, "0")
 	local debugmode = getSetVariable(DENON_SERVICE, "Debug", lul_device, "0")	
+	local oldversion = getSetVariable(DENON_SERVICE, "Version", lul_device, version)
+	
 	if (debugmode=="1") then
 		DEBUG_MODE = true
 		UserMessage("Enabling debug mode for device:"..lul_device,TASK_BUSY)

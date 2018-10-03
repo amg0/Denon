@@ -11,6 +11,12 @@
             <defaultValue>0</defaultValue>
             <shortCode>debug</shortCode>
         </stateVariable>
+        <stateVariable sendEvents="no">
+            <name>Cmd</name>
+            <dataType>string</dataType>
+            <defaultValue></defaultValue>
+            <shortCode>cmd</shortCode>
+        </stateVariable>
 	</serviceStateTable>
     <actionList>
         <action>
@@ -20,6 +26,16 @@
                     <name>newDebugMode</name>
                     <direction>in</direction>
                     <relatedStateVariable>Debug</relatedStateVariable>
+                </argument>
+            </argumentList>
+        </action>
+        <action>
+            <name>SendCmd</name>
+            <argumentList>
+                <argument>
+                    <name>newCmd</name>
+                    <direction>in</direction>
+                    <relatedStateVariable>Cmd</relatedStateVariable>
                 </argument>
             </argumentList>
         </action>
