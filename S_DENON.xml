@@ -39,5 +39,11 @@
                 </argument>
             </argumentList>
         </action>
+        <action>
+            <name>PowerOn</name>
+        </action>	
+        <action>
+            <name>StandBy</name>
+        </action>	
 	</actionList>
 </scpd>

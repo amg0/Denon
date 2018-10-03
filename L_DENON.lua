@@ -264,10 +264,12 @@ Denon = {
 				if (c==nil) then
 					break
 				end
-				result = (result or '')..c
+				if (c~='\r') then
+					result = (result or '')..c
+				end
 			end
 		end
-		debug(string.format("Denon:receive() => %s",result or 'nil'))
+		-- debug(string.format("Denon:receive() => %s",result or 'nil'))
         return result, err		
 	end,
 	
@@ -346,10 +348,28 @@ local function setDebugMode(lul_device,newDebugMode)
 end
 
 local function sendCmd(lul_device,newCmd)
-  lul_device = tonumber(lul_device)
-  newCmd = newCmd or ""
-  debug(string.format("sendCmd(%s,%s)",lul_device,newCmd))
-  return 
+	lul_device = tonumber(lul_device)
+	newCmd = newCmd or ""
+	debug(string.format("sendCmd(%s,%s)",lul_device,newCmd))
+	local ipaddr = luup.attr_get ('ip', lul_device )
+	if (isempty(ipaddr) == false) then
+		local d = Denon:new(ipaddr)
+		local result,err = d:connect()
+		if (result~=nil) then
+			luup.variable_set(DENON_SERVICE, "LastResult", "", lul_device)
+			result,err = d:command(newCmd) 
+			if (result~=nil) then
+				log(string.format("send command %s received result: %s",newCmd,result))
+				luup.variable_set(DENON_SERVICE, "LastResult", result, lul_device)
+			else
+				warning(string.format("could not send command %s to %s",newCmd,ipaddr))
+			end
+		else
+			warning(string.format("could not connect to %s",ipaddr))
+		end
+		d:disconnect()
+	end
+	return 
 end
 
 ------------------------------------------------
@@ -364,10 +384,10 @@ local function startEngine(lul_device)
 
 	local ipaddr = luup.attr_get ('ip', lul_device )	
 	if (isempty(ipaddr) == false) then
+		res=true
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
-	
 	return (res~=nil)
 end
 
@@ -378,6 +398,7 @@ function startupDeferred(lul_device)
 	local iconCode = getSetVariable(DENON_SERVICE,"IconCode", lul_device, "0")
 	local debugmode = getSetVariable(DENON_SERVICE, "Debug", lul_device, "0")	
 	local oldversion = getSetVariable(DENON_SERVICE, "Version", lul_device, version)
+	local lastresult = getSetVariable(DENON_SERVICE, "LastResult", lul_device, "")	
 	
 	if (debugmode=="1") then
 		DEBUG_MODE = true

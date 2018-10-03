@@ -21,5 +21,21 @@
 			return 4,0
 			</job>
 		</action>		         
+		<action>
+			<serviceId>urn:upnp-org:serviceId:altdenon1</serviceId>
+			<name>PowerOn</name>
+			<job>
+			sendCmd(lul_device,"PWON")
+			return 4,0
+			</job>
+		</action>		         
+		<action>
+			<serviceId>urn:upnp-org:serviceId:altdenon1</serviceId>
+			<name>StandBy</name>
+			<job>
+			sendCmd(lul_device,"STANDBY")
+			return 4,0
+			</job>
+		</action>		         
 	</actionList>
 </implementation>
