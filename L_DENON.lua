@@ -187,6 +187,39 @@ function tablelength(T)
   end
   return count
 end
+
+function tableadd(t1,t2)
+    for i=1,#t2 do
+        t1[#t1+1] = t2[i]
+    end
+    return t1
+end
+
+local function Split(str, delim, maxNb)
+	-- Eliminate bad cases...
+	if string.find(str, delim) == nil then
+		return { str }
+	end
+	if maxNb == nil or maxNb < 1 then
+		maxNb = 0	 -- No limit
+	end
+	local result = {}
+	local pat = "(.-)" .. delim .. "()"
+	local nb = 0
+	local lastPos
+	for part, pos in string.gmatch(str, pat) do
+		nb = nb + 1
+		result[nb] = part
+		lastPos = pos
+		if nb == maxNb then break end
+	end
+	-- Handle the last field
+	if nb ~= maxNb then
+		result[nb + 1] = string.sub(str, lastPos)
+	end
+	return result
+end
+
 Queue = {
 	new = function(self,o)
 		o = o or {}	  -- create object if user does not provide one
@@ -328,7 +361,7 @@ Denon = {
                 table.insert(result_cmds,result)
             end
         end
-		return table.concat(result_cmds, ","),err
+		return result_cmds,err
 	end,
 }
 
@@ -347,6 +380,20 @@ local function setDebugMode(lul_device,newDebugMode)
   end
 end
 
+-------------------------------------------------
+--- connect
+--- send multiple commands separated by , ( CSV )
+--- receives output
+--- store result in LastResult variable ( CSV )
+--- disconnect
+-------------------------------------------------
+local function updateDevice(lul_device,success,results)
+	if (results~=nil) then
+		luup.variable_set(DENON_SERVICE, "LastResult", results , lul_device)
+	end
+	setVariableIfChanged(DENON_SERVICE, "IconCode", success and "100" or "0", lul_device)
+end
+
 local function sendCmd(lul_device,newCmd)
 	lul_device = tonumber(lul_device)
 	newCmd = newCmd or ""
@@ -356,16 +403,22 @@ local function sendCmd(lul_device,newCmd)
 		local d = Denon:new(ipaddr)
 		local result,err = d:connect()
 		if (result~=nil) then
+			local tblResults={}
+			local parts = Split(newCmd, ",")
 			luup.variable_set(DENON_SERVICE, "LastResult", "", lul_device)
-			result,err = d:command(newCmd) 
-			if (result~=nil) then
-				log(string.format("send command %s received result: %s",newCmd,result))
-				luup.variable_set(DENON_SERVICE, "LastResult", result, lul_device)
-			else
-				warning(string.format("could not send command %s to %s",newCmd,ipaddr))
+			for k,cmd in pairs(parts) do
+				result,err = d:command(cmd) 
+				if (result~=nil) then
+					log(string.format("send command %s received result: %s",cmd,json.encode(result)))
+					tableadd(tblResults,result)
+				else
+					warning(string.format("could not send command %s to %s",cmd,ipaddr))
+				end
 			end
+			updateDevice(lul_device,true,table.concat(tblResults,","))
 		else
 			warning(string.format("could not connect to %s",ipaddr))
+			updateDevice(lul_device,false)
 		end
 		d:disconnect()
 	end
@@ -381,10 +434,11 @@ local function startEngine(lul_device)
 	local success =  false
 	local res,err = nil,''
 	lul_device = tonumber(lul_device)
-
-	local ipaddr = luup.attr_get ('ip', lul_device )	
+	local ipaddr = luup.attr_get ('ip', lul_device )
 	if (isempty(ipaddr) == false) then
-		res=true
+		local d = Denon:new(ipaddr)
+		res,err = d:connect()
+		d:disconnect()
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
@@ -398,7 +452,7 @@ function startupDeferred(lul_device)
 	local iconCode = getSetVariable(DENON_SERVICE,"IconCode", lul_device, "0")
 	local debugmode = getSetVariable(DENON_SERVICE, "Debug", lul_device, "0")	
 	local oldversion = getSetVariable(DENON_SERVICE, "Version", lul_device, version)
-	local lastresult = getSetVariable(DENON_SERVICE, "LastResult", lul_device, "")	
+	luup.variable_set(DENON_SERVICE, "LastResult", "", lul_device)
 	
 	if (debugmode=="1") then
 		DEBUG_MODE = true
@@ -427,7 +481,7 @@ function startupDeferred(lul_device)
 	end
 
 	local success = startEngine(lul_device)
-	setVariableIfChanged(DENON_SERVICE, "IconCode", success and "100" or "0", lul_device)
+	updateDevice(lul_device,success)
 	
 	-- report success or failure
 	if( luup.version_branch == 1 and luup.version_major == 7) then
