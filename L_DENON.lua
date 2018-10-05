@@ -394,7 +394,19 @@ local function updateDevice(lul_device,success,results)
 	setVariableIfChanged(DENON_SERVICE, "IconCode", success and "100" or "0", lul_device)
 end
 
+local function processResult(lul_device,tblResult)
+	debug(string.format("processResult(%s,%s)",lul_device,json.encode(result)))
+	for k,result in pairs(tblResult) do
+		if (result=="PWON") then
+			setVariableIfChanged("urn:upnp-org:serviceId:SwitchPower1", "Status", "1", lul_device)
+		elseif (result=="PWSTANDBY") then
+			setVariableIfChanged("urn:upnp-org:serviceId:SwitchPower1", "Status", "0", lul_device)
+		end
+	end
+end
+
 local function sendCmd(lul_device,newCmd)
+	local res=false
 	lul_device = tonumber(lul_device)
 	newCmd = newCmd or ""
 	debug(string.format("sendCmd(%s,%s)",lul_device,newCmd))
@@ -410,7 +422,9 @@ local function sendCmd(lul_device,newCmd)
 				result,err = d:command(cmd) 
 				if (result~=nil) then
 					log(string.format("send command %s received result: %s",cmd,json.encode(result)))
+					processResult(lul_device,result)
 					tableadd(tblResults,result)
+					res=true
 				else
 					warning(string.format("could not send command %s to %s",cmd,ipaddr))
 				end
@@ -422,7 +436,7 @@ local function sendCmd(lul_device,newCmd)
 		end
 		d:disconnect()
 	end
-	return 
+	return res
 end
 
 ------------------------------------------------
@@ -432,17 +446,16 @@ end
 local function startEngine(lul_device)
 	debug(string.format("startEngine(%s)",lul_device))
 	local success =  false
+	local result = false
 	local res,err = nil,''
 	lul_device = tonumber(lul_device)
 	local ipaddr = luup.attr_get ('ip', lul_device )
 	if (isempty(ipaddr) == false) then
-		local d = Denon:new(ipaddr)
-		res,err = d:connect()
-		d:disconnect()
+		result = sendCmd(lul_device,"PW?")
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
-	return (res~=nil)
+	return result
 end
 
 function startupDeferred(lul_device)
@@ -453,7 +466,8 @@ function startupDeferred(lul_device)
 	local debugmode = getSetVariable(DENON_SERVICE, "Debug", lul_device, "0")	
 	local oldversion = getSetVariable(DENON_SERVICE, "Version", lul_device, version)
 	luup.variable_set(DENON_SERVICE, "LastResult", "", lul_device)
-	
+	local status = getSetVariable("urn:upnp-org:serviceId:SwitchPower1", "Status", lul_device, "0")
+		
 	if (debugmode=="1") then
 		DEBUG_MODE = true
 		UserMessage("Enabling debug mode for device:"..lul_device,TASK_BUSY)
