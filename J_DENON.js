@@ -47,9 +47,33 @@ var DENON = (function(api,$) {
 	//-------------------------------------------------------------	
 
 	function DENON_Settings(deviceID) {
-		var html = "Hello World"
-		// api.setCpanelContent(html);
+		var ip_address = jsonp.ud.devices[DENON.findDeviceIdx(deviceID)].ip;
+		var html =
+		'                                                           \
+		  <div id="denon-settings">                                           \
+			<form class="row" id="denon-settings-form">                        \
+				<div class="form-group col-6 col-xs-6">																	\
+					<label for="denon-ipaddr">IP Addr</label>		\
+					<input type="text" class="form-control" id="denon-ipaddr" placeholder="ip address">	\
+				</div>																										\
+				<div class="form-group col-6 col-xs-6">																	\
+				</div>																										\
+				<button id="denon-submit" type="submit" class="btn btn-default">Submit</button>	\
+			</form>                                                 \
+		  </div>                                                    \
+		'		// api.setCpanelContent(html);
 		set_panel_html(html);
+		jQuery( "#denon-ipaddr" ).val(ip_address);
+		jQuery( "#denon-settings-form" ).on("submit", function(event) {
+			event.preventDefault();
+			var ip = jQuery( "#denon-ipaddr" ).val();
+			if (DENON.goodip(ip)) {
+				DENON.saveVar(deviceID,  null, "ip", ip, false)
+			} else {
+				alert('invalid ip address')
+			}
+			return false;
+		});
 	};
 	
 	function DENON_Status(deviceID) {
