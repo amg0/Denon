@@ -33,7 +33,7 @@
 			<serviceId>urn:upnp-org:serviceId:altdenon1</serviceId>
 			<name>StandBy</name>
 			<job>
-			sendCmd(lul_device,"STANDBY")
+			sendCmd(lul_device,"PWSTANDBY")
 			return 4,0
 			</job>
 		</action>		         

@@ -11,7 +11,7 @@ local DENON_SERVICE	= "urn:upnp-org:serviceId:altdenon1"
 local devicetype	= "urn:schemas-upnp-org:device:altdenon:1"
 -- local this_device	= nil
 local DEBUG_MODE	= false -- controlled by UPNP action
-local version		= "v0.1"
+local version		= "v0.2"
 local JSON_FILE = "D_DENON.json"
 local UI7_JSON_FILE = "D_DENON_UI7.json"
 
@@ -21,7 +21,7 @@ local socket = require("socket")
 -- local http = require("socket.http")
 -- local https = require ("ssl.https")
 -- local ltn12 = require("ltn12")
--- local modurl = require ("socket.url")
+local modurl = require ("socket.url")
 
 local ampli = nil
 local this_device = nil
@@ -419,6 +419,8 @@ local function sendCmd(lul_device,newCmd)
 			local parts = Split(newCmd, ",")
 			luup.variable_set(DENON_SERVICE, "LastResult", "", lul_device)
 			for k,cmd in pairs(parts) do
+				--uudecode
+				cmd = modurl.unescape( cmd )
 				result,err = d:command(cmd) 
 				if (result~=nil) then
 					log(string.format("send command %s received result: %s",cmd,json.encode(result)))

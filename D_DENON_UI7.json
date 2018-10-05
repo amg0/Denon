@@ -143,6 +143,67 @@
 			},
 			{
 				"ControlType": "label",
+				"top": "0",
+				"left": "0",
+				"text_align": "left",
+				"Label": {
+					"lang_tag": "power_label",
+					"text": "Power:"
+				},
+				"Display": {
+					"Top": 110,
+					"Left": 10,
+					"Width": 50,
+					"Height": 20
+				}
+			},
+			{
+				"ControlType": "multi_state_button",
+				"top": "0",
+				"left": "0",
+				"Display": {
+					"Top": 100,
+					"Left": 140
+				},
+				"states": [
+					{
+						"Label": {
+							"lang_tag": "power_on",
+							"text": "On"
+						},
+						"ControlGroup": "1",
+						"Display": {
+							"Service": "urn:upnp-org:serviceId:SwitchPower1",
+							"Variable": "Status",
+							"Value": "1"
+						},
+						"Command": {
+							"Service": "urn:upnp-org:serviceId:altdenon1",
+							"Action": "PowerOn",
+						},
+						"ControlCode": "power_on"
+					},
+					{
+						"Label": {
+							"lang_tag": "power_off",
+							"text": "Off"
+						},
+						"ControlGroup": "1",
+						"Display": {
+							"Service": "urn:upnp-org:serviceId:SwitchPower1",
+							"Variable": "Status",
+							"Value": "0"
+						},
+						"Command": {
+							"Service": "urn:upnp-org:serviceId:altdenon1",
+							"Action": "StandBy",
+						},
+						"ControlCode": "power_off"
+					}
+				]
+			},
+			{
+				"ControlType": "label",
 				"top": "1",
 				"left": "0",
 				"text_align": "left",
@@ -151,7 +212,7 @@
 					"text": "Version"
 				},
 				"Display": {
-					"Top": 110,
+					"Top": 160,
 					"Left": 10,
 					"Width": 50,
 					"Height": 20
@@ -167,8 +228,8 @@
 				"Display": {
 					"Service": "urn:upnp-org:serviceId:altdenon1",
 					"Variable": "Version",
-					"Top": 130,
-					"Left": 10,
+					"Top": 160,
+					"Left": 80,
 					"Width": 50,
 					"Height": 20
 				}
