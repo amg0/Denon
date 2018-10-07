@@ -184,6 +184,8 @@
 						"Command": {
 							"Service": "urn:upnp-org:serviceId:altdenon1",
 							"Action": "PowerOn",
+							"Parameters": [
+							]
 						},
 						"ControlCode": "power_on"
 					},
@@ -201,6 +203,8 @@
 						"Command": {
 							"Service": "urn:upnp-org:serviceId:altdenon1",
 							"Action": "StandBy",
+							"Parameters": [
+							]
 						},
 						"ControlCode": "power_off"
 					}
