@@ -449,12 +449,9 @@ end
 ------------------------------------------------
 -- UPNP actions Sequence
 ------------------------------------------------
-
-local function startEngine(lul_device)
-	debug(string.format("startEngine(%s)",lul_device))
-	local success =  false
+function isOnline(lul_device)
+	debug(string.format("isOnline(%s)",lul_device))
 	local result = false
-	local res,err = nil,''
 	lul_device = tonumber(lul_device)
 	local ipaddr = luup.attr_get ('ip', lul_device )
 	if (isempty(ipaddr) == false) then
@@ -462,7 +459,16 @@ local function startEngine(lul_device)
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
+	luup.call_delay("isOnline", 60, lul_device)
 	return result
+end
+
+local function startEngine(lul_device)
+	debug(string.format("startEngine(%s)",lul_device))
+	local success =  false
+	local res,err = nil,''
+	lul_device = tonumber(lul_device)
+	return isOnline(lul_device)
 end
 
 function startupDeferred(lul_device)

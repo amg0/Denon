@@ -36,7 +36,11 @@ By design, this plugin connects and disconnect from the AVR for each commands, t
 One drawback is that you should not call 2 SendCmd() one after the other too fast. spacing of 1 sec is recommanded. 
 in order to overcome this limitation sendCmd() supports sending several chained commands if you separate them with a comma (,)
 
-Special support for ALTUI display
+* Special support for ALTUI display
+
+The Icon of the device will be green or red depending if the network connectivity was successful or not. ( meaning the device is switched on and connected on the network ). 
+NOTE that this is not poweron / standby status. so if the icon is red the device is not present or ipaddr is not correct. if the icon is green, the device maybe either
+in power on or standby mode.  The color of the standby / power button will reflect the current state.
 
 ![ALTUI image](https://raw.githubusercontent.com/amg0/Denon/master/Doc/Denon.PNG)
 
