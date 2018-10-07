@@ -8,6 +8,9 @@ tested on : AVR4311 and X3400H models
 
 ### Functionality
 Provides a plugin for VERA to enable control of PowerON / Standby , Mute On Off , and more generally sending a sequence of telnet commands
+you can select the source input by using sendCmd("SITV") command for instance. SI commands are defined in Denon telnet protocol documentation. ALTUI offers an easy interface to select them from the ALTUI UI.
+
+To program actions in scenes, you use the UPNP commands in the advanced scene editor of UI7 or ALTUI.
 
 ### Variables
 * Debug: 1 to set the debug mode for the plugin
