@@ -18,6 +18,10 @@ https://www.paypal.com/donate/?token=sHd22BzsIP7WQDQwkkUgvfx_wNbhvxc-zzkOKh-afkz
 ### Versions
 * v0.4 : fully functional, SendCmd() to send any command. PowerOn, StandBy and Mute UPNP as helpers. ALTUI integration
 
+### UI
+* Control page in UI7
+![ALTUI image](https://raw.githubusercontent.com/amg0/Denon/master/Doc/Control.PNG)
+
 ### Variables
 * Debug: 1 to set the debug mode for the plugin
 * LastResult: a csv separated string containing the sequence of responses received from the AVR after sending a command
