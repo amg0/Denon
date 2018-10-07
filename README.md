@@ -32,6 +32,7 @@ One drawback is that you should not call 2 SendCmd() one after the other too fas
 in order to overcome this limitation sendCmd() supports sending several chained commands if you separate them with a comma (,)
 
 Special support for ALTUI display
+
 ![ALTUI image](https://raw.githubusercontent.com/amg0/Denon/master/Doc/Denon.PNG)
 
 ### Installation
