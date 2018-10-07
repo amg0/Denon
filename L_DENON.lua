@@ -398,9 +398,9 @@ local function processResult(lul_device,tblResult)
 	debug(string.format("processResult(%s,%s)",lul_device,json.encode(result)))
 	for k,result in pairs(tblResult) do
 		if (result=="PWON") then
-			setVariableIfChanged("urn:upnp-org:serviceId:SwitchPower1", "Status", "1", lul_device)
+			setVariableIfChanged(DENON_SERVICE, "Status", "1", lul_device)
 		elseif (result=="PWSTANDBY") then
-			setVariableIfChanged("urn:upnp-org:serviceId:SwitchPower1", "Status", "0", lul_device)
+			setVariableIfChanged(DENON_SERVICE, "Status", "0", lul_device)
 		end
 	end
 end
@@ -479,7 +479,7 @@ function startupDeferred(lul_device)
 	local debugmode = getSetVariable(DENON_SERVICE, "Debug", lul_device, "0")	
 	local oldversion = getSetVariable(DENON_SERVICE, "Version", lul_device, version)
 	luup.variable_set(DENON_SERVICE, "LastResult", "", lul_device)
-	local status = getSetVariable("urn:upnp-org:serviceId:SwitchPower1", "Status", lul_device, "0")
+	local status = getSetVariable(DENON_SERVICE, "Status", lul_device, "0")
 		
 	if (debugmode=="1") then
 		DEBUG_MODE = true
