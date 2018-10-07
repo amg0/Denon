@@ -37,5 +37,14 @@
 			return 4,0
 			</job>
 		</action>		         
+		<action>
+			<serviceId>urn:upnp-org:serviceId:altdenon1</serviceId>
+			<name>Mute</name>
+			<job>
+			setMute(lul_device,lul_settings.MuteOn)
+			return 4,0
+			</job>
+		</action>		         
+		
 	</actionList>
 </implementation>

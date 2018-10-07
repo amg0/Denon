@@ -18,12 +18,6 @@ var DENON = (function(api,$) {
 	var DENON_Svs = 'urn:upnp-org:serviceId:altdenon1';
 	var splits = jQuery.fn.jquery.split(".");
 	var ui5 = (splits[0]=="1" && splits[1]<="5");
-	
-	jQuery("body").prepend(`
-	<style>
-	.DENON-cls { width:100%; }
-	.netmon-devicetbl .form-control { padding-left:2px; padding-right:0px; }
-	</style>`)
 
 	function isNullOrEmpty(value) {
 		return (value == null || value.length === 0);	// undefined == null also
@@ -46,15 +40,16 @@ var DENON = (function(api,$) {
 	// Device TAB : Settings
 	//-------------------------------------------------------------	
 
+	// <input type="text" class="form-control" id="denon-ipaddr" placeholder="ip address" required=""  pattern="((^|\.)((25[0-5])|(2[0-4]\d)|(1\d\d)|([1-9]?\d))){4}$" value="" >	\
 	function DENON_Settings(deviceID) {
 		var ip_address = jsonp.ud.devices[DENON.findDeviceIdx(deviceID)].ip;
 		var html =
 		'                                                           \
 		  <div id="denon-settings">                                           \
-			<form class="row" id="denon-settings-form">                        \
+			<form novalidate action="javascript:void(0);" class="row" id="denon-settings-form">                        \
 				<div class="form-group col-6 col-xs-6">																	\
 					<label for="denon-ipaddr">IP Addr</label>		\
-					<input type="text" class="form-control" id="denon-ipaddr" placeholder="ip address">	\
+					<input type="text" class="form-control" id="denon-ipaddr" placeholder="ip address" required=""  value="" >	\
 				</div>																										\
 				<div class="form-group col-6 col-xs-6">																	\
 				</div>																										\
@@ -64,47 +59,34 @@ var DENON = (function(api,$) {
 		'		// api.setCpanelContent(html);
 		set_panel_html(html);
 		jQuery( "#denon-ipaddr" ).val(ip_address);
-		jQuery( "#denon-settings-form" ).on("submit", function(event) {
-			event.preventDefault();
-			var ip = jQuery( "#denon-ipaddr" ).val();
-			if (DENON.goodip(ip)) {
-				DENON.saveVar(deviceID,  null, "ip", ip, false)
-			} else {
-				alert('invalid ip address')
-			}
-			return false;
-		});
-	};
-	
-	function DENON_Status(deviceID) {
-		function sortByName(a,b) {
-			if (a.name == b.name)
-				return 0
-			return (a.name < b.name) ? -1 : 1
-		}
 		
-		var html ="";
-		var data = JSON.parse( get_device_state(deviceID,  DENON.DENON_Svs, 'DevicesStatus',1))
-		var model = jQuery.map( data.sort( sortByName ), function(target) {
-			var statusTpl = "<span class={1}>{0}</span>"
-			return {
-				name: target.name,
-				ipaddr: target.ipaddr,
-				status: (target.tripped =="1")
-					? ("<b>"+DENON.format( statusTpl, 'off-line' ,'text-danger' )+"</b>")
-					: DENON.format( statusTpl, 'on-line' ,'text-success' )
+		function _onSave(event) {
+			var form = jQuery(this).closest("form")[0]
+			var bValid = form.checkValidity()
+			if (bValid === false) {
+				event.preventDefault();
+				event.stopPropagation();
+				alert("The form has some invalid values")
+			} else {
+				var ip = jQuery( "#denon-ipaddr" ).val();
+				if (DENON.goodip(ip)) {
+					DENON.saveVar(deviceID,  null, "ip", ip, false)
+					alert('changes are saved')
+				} else {
+					jQuery( "#denon-ipaddr" ).addClass("is-invalid").removeClass("is-valid")
+					alert('invalid ip address')
+				}
 			}
-		});
-		var html = DENON.array2Table(model,'name',[],'','montool-statustbl','montool-statustbl0',false)
-		set_panel_html(html);
-		// api.setCpanelContent(html);
+			form.classList.add('was-validated');
+			return false;
+		}		
+		jQuery( "#denon-settings-form" ).on("submit", _onSave)
 	};
 	
 	var myModule = {
 		DENON_Svs 	: DENON_Svs,
 		format		: format,
 		Settings 	: DENON_Settings,
-		Status 		: DENON_Status,
 		
 		//-------------------------------------------------------------
 		// Helper functions to build URLs to call VERA code from JS
@@ -267,10 +249,6 @@ var DENON = (function(api,$) {
 //-------------------------------------------------------------	
 function DENON_Settings (deviceID) {
 	return DENON.Settings(deviceID)
-}
-
-function DENON_Status (deviceID) {
-	return DENON.Status(deviceID)
 }
 		
 function DENON_Donate(deviceID) {

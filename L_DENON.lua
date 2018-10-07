@@ -11,7 +11,7 @@ local DENON_SERVICE	= "urn:upnp-org:serviceId:altdenon1"
 local devicetype	= "urn:schemas-upnp-org:device:altdenon:1"
 -- local this_device	= nil
 local DEBUG_MODE	= false -- controlled by UPNP action
-local version		= "v0.2"
+local version		= "v0.3"
 local JSON_FILE = "D_DENON.json"
 local UI7_JSON_FILE = "D_DENON_UI7.json"
 
@@ -439,6 +439,11 @@ local function sendCmd(lul_device,newCmd)
 		d:disconnect()
 	end
 	return res
+end
+
+local function setMute(lul_device,MuteOn)
+	debug(string.format("setMute(%s,%s)",lul_device,MuteOn))
+	return sendCmd(lul_device,(MuteOn=="1") and "MUON" or "MUOFF")
 end
 
 ------------------------------------------------
