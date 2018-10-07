@@ -11,6 +11,10 @@ you can select the source input by using sendCmd("SITV") command for instance. S
 
 To program actions in scenes, you use the UPNP commands in the advanced scene editor of UI7 or ALTUI.
 
+### Cost
+Freeware but Donations are appreciated : 
+https://www.paypal.com/donate/?token=sHd22BzsIP7WQDQwkkUgvfx_wNbhvxc-zzkOKh-afkzEc5xHAXPOa7sTsbpy-2tfDCoGvm&country.x=FR&locale.x=FR
+
 ### Versions
 * v0.4 : fully functional, SendCmd() to send any command. PowerOn, StandBy and Mute UPNP as helpers. ALTUI integration
 
