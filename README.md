@@ -25,8 +25,12 @@ Mute( MuteOn ) :  1 to mute the AVR,  0 to unmute
 ### Triggers
 none
 
-### Future evolutions and architectural flexibility
-n/a
+### Misc Notes
+Denon AVR only support one connection, so to make it work it is important that you insure no other app is using the AVR telnet protocol at the same time.
+By design, this plugin connects and disconnect from the AVR for each commands, therefore it does not keep the connection open and should limit the problem.
+One drawback is that you should not call 2 SendCmd() one after the other too fast. spacing of 1 sec is recommanded. 
+in order to overcome this limitation sendCmd() supports sending several chained commands if you separate them with a comma (,)
+
 
 ### Installation
 download the files and upload them into the VERA develop apps / luup files page
