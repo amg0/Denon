@@ -51,6 +51,10 @@
 		"Position": "1",
 		"TopNavigationTab": "1",
 		"TabType": "flash",
+		"AfterInit": {
+			"ScriptName": "J_ALTUI.js",
+			"Function": "DENON_AfterInit"
+		},
 		"SceneGroup": [
 			{
 				"id": "1",
