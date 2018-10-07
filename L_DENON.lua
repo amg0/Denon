@@ -11,7 +11,7 @@ local DENON_SERVICE	= "urn:upnp-org:serviceId:altdenon1"
 local devicetype	= "urn:schemas-upnp-org:device:altdenon:1"
 -- local this_device	= nil
 local DEBUG_MODE	= false -- controlled by UPNP action
-local version		= "v0.3"
+local version		= "v0.4"
 local JSON_FILE = "D_DENON.json"
 local UI7_JSON_FILE = "D_DENON_UI7.json"
 
