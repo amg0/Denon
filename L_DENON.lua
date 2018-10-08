@@ -8,10 +8,12 @@
 -- // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE .
 local MSG_CLASS		= "DENON"
 local DENON_SERVICE	= "urn:upnp-org:serviceId:altdenon1"
+local POWER_SERVICE	= "urn:upnp-org:serviceId:SwitchPower1"
+
 local devicetype	= "urn:schemas-upnp-org:device:altdenon:1"
 -- local this_device	= nil
 local DEBUG_MODE	= false -- controlled by UPNP action
-local version		= "v0.4"
+local version		= "v0.5"
 local JSON_FILE = "D_DENON.json"
 local UI7_JSON_FILE = "D_DENON_UI7.json"
 
@@ -398,9 +400,9 @@ local function processResult(lul_device,tblResult)
 	debug(string.format("processResult(%s,%s)",lul_device,json.encode(result)))
 	for k,result in pairs(tblResult) do
 		if (result=="PWON") then
-			setVariableIfChanged(DENON_SERVICE, "Status", "1", lul_device)
+			setVariableIfChanged(POWER_SERVICE, "Status", "1", lul_device)
 		elseif (result=="PWSTANDBY") then
-			setVariableIfChanged(DENON_SERVICE, "Status", "0", lul_device)
+			setVariableIfChanged(POWER_SERVICE, "Status", "0", lul_device)
 		end
 	end
 end
@@ -479,7 +481,7 @@ function startupDeferred(lul_device)
 	local debugmode = getSetVariable(DENON_SERVICE, "Debug", lul_device, "0")	
 	local oldversion = getSetVariable(DENON_SERVICE, "Version", lul_device, version)
 	luup.variable_set(DENON_SERVICE, "LastResult", "", lul_device)
-	local status = getSetVariable(DENON_SERVICE, "Status", lul_device, "0")
+	local status = getSetVariable(POWER_SERVICE, "Status", lul_device, "0")
 		
 	if (debugmode=="1") then
 		DEBUG_MODE = true
