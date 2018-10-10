@@ -101,6 +101,7 @@ var DENON = (function(api,$) {
 				{id:"net", label:"NET/USB", cmd:"NET/USB"},
 				{id:"game", label:"GAME", cmd:"GAME"},
 				{id:"iradio", label:"IRADIO", cmd:"IRADIO"},
+				{id:"mplay", label:"MPLAYER", cmd:"MPLAY"},
 				{id:"phono", label:"PHONO", cmd:"PHONO"},
 				{id:"server", label:"SERVER", cmd:"SERVER"},
 				{id:"tuner", label:"TUNER", cmd:"TUNER"},
