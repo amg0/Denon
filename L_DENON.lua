@@ -13,7 +13,7 @@ local POWER_SERVICE	= "urn:upnp-org:serviceId:SwitchPower1"
 local devicetype	= "urn:schemas-upnp-org:device:altdenon:1"
 -- local this_device	= nil
 local DEBUG_MODE	= false -- controlled by UPNP action
-local version		= "v0.5"
+local version		= "v0.6"
 local JSON_FILE = "D_DENON.json"
 local UI7_JSON_FILE = "D_DENON_UI7.json"
 
@@ -27,7 +27,8 @@ local modurl = require ("socket.url")
 
 local ampli = nil
 local this_device = nil
-
+local retry_timer = 1			-- in mn, retry time
+	
 ------------------------------------------------
 -- Debug --
 ------------------------------------------------
@@ -411,8 +412,8 @@ local function sendCmd(lul_device,newCmd)
 	local res=false
 	lul_device = tonumber(lul_device)
 	newCmd = newCmd or ""
-	debug(string.format("sendCmd(%s,%s)",lul_device,newCmd))
 	local ipaddr = luup.attr_get ('ip', lul_device )
+	debug(string.format("sendCmd(%s,%s) to %s",lul_device,newCmd,ipaddr or ""))
 	if (isempty(ipaddr) == false) then
 		local d = Denon:new(ipaddr)
 		local result,err = d:connect()
@@ -425,7 +426,7 @@ local function sendCmd(lul_device,newCmd)
 				cmd = modurl.unescape( cmd )
 				result,err = d:command(cmd) 
 				if (result~=nil) then
-					log(string.format("send command %s received result: %s",cmd,json.encode(result)))
+					log(string.format("send command %s tp %s received result: %s",cmd,ipaddr,json.encode(result)))
 					processResult(lul_device,result)
 					tableadd(tblResults,result)
 					res=true
@@ -451,6 +452,18 @@ end
 ------------------------------------------------
 -- UPNP actions Sequence
 ------------------------------------------------
+local function updateCommStatus(lul_device,success)
+	if( luup.version_branch == 1 and luup.version_major == 7) then
+		if (success == true) then
+			luup.set_failure(0,lul_device)  -- should be 0 in UI7
+		else
+			luup.set_failure(1,lul_device)  -- should be 0 in UI7
+		end
+	else
+		luup.set_failure(false,lul_device)	-- should be 0 in UI7
+	end
+end
+
 function isOnline(lul_device)
 	debug(string.format("isOnline(%s)",lul_device))
 	local result = false
@@ -461,17 +474,23 @@ function isOnline(lul_device)
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
-	luup.call_delay("isOnline", 60, lul_device)
+	if (result==false) then
+		retry_timer = math.min( 2*retry_timer, 60 )
+	else
+		retry_timer=1
+	end
+	luup.call_delay("isOnline", 60 * retry_timer, lul_device)
+	updateCommStatus(lul_device,result)
 	return result
 end
 
 local function startEngine(lul_device)
 	debug(string.format("startEngine(%s)",lul_device))
-	local success =  false
 	local res,err = nil,''
 	lul_device = tonumber(lul_device)
 	return isOnline(lul_device)
 end
+
 
 function startupDeferred(lul_device)
 	log("startupDeferred, called on behalf of device:"..lul_device)
@@ -513,15 +532,7 @@ function startupDeferred(lul_device)
 	updateDevice(lul_device,success)
 	
 	-- report success or failure
-	if( luup.version_branch == 1 and luup.version_major == 7) then
-		if (success == true) then
-			luup.set_failure(0,lul_device)  -- should be 0 in UI7
-		else
-			luup.set_failure(1,lul_device)  -- should be 0 in UI7
-		end
-	else
-		luup.set_failure(false,lul_device)	-- should be 0 in UI7
-	end
+	updateCommStatus(lul_device,success)
 
 	log("startup completed")
 end
