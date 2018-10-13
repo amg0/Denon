@@ -426,7 +426,7 @@ local function sendCmd(lul_device,newCmd)
 				cmd = modurl.unescape( cmd )
 				result,err = d:command(cmd) 
 				if (result~=nil) then
-					log(string.format("send command %s tp %s received result: %s",cmd,ipaddr,json.encode(result)))
+					debug(string.format("send command %s to %s received result: %s",cmd,ipaddr,json.encode(result)))
 					processResult(lul_device,result)
 					tableadd(tblResults,result)
 					res=true
@@ -462,6 +462,11 @@ local function updateCommStatus(lul_device,success)
 	else
 		luup.set_failure(false,lul_device)	-- should be 0 in UI7
 	end
+	if (success==false) then
+		retry_timer = math.min( 2*retry_timer, 60 )
+	else
+		retry_timer=1
+	end
 end
 
 function isOnline(lul_device)
@@ -474,13 +479,8 @@ function isOnline(lul_device)
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
-	if (result==false) then
-		retry_timer = math.min( 2*retry_timer, 60 )
-	else
-		retry_timer=1
-	end
-	luup.call_delay("isOnline", 60 * retry_timer, lul_device)
 	updateCommStatus(lul_device,result)
+	luup.call_delay("isOnline", 60 * retry_timer, lul_device)
 	return result
 end
 
