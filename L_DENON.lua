@@ -27,7 +27,7 @@ local modurl = require ("socket.url")
 
 local ampli = nil
 local this_device = nil
-local retry_timer = 1			-- in mn, retry time
+local retry_timer = 1/2			-- in mn, retry time
 	
 ------------------------------------------------
 -- Debug --
@@ -391,10 +391,28 @@ end
 --- disconnect
 -------------------------------------------------
 local function updateDevice(lul_device,success,results)
+
+	setVariableIfChanged(DENON_SERVICE, "IconCode", success and "100" or "0", lul_device)
+
 	if (results~=nil) then
 		luup.variable_set(DENON_SERVICE, "LastResult", results , lul_device)
 	end
-	setVariableIfChanged(DENON_SERVICE, "IconCode", success and "100" or "0", lul_device)
+
+	if (success==false) then
+		retry_timer = math.min( 2*retry_timer, 60 )
+	else
+		retry_timer=1
+	end
+
+	if( luup.version_branch == 1 and luup.version_major == 7) then
+		if (success == true) then
+			luup.set_failure(0,lul_device)  -- should be 0 in UI7
+		else
+			luup.set_failure(1,lul_device)  -- should be 0 in UI7
+		end
+	else
+		luup.set_failure(success,lul_device)	-- should be 0 in UI7
+	end
 end
 
 local function processResult(lul_device,tblResult)
@@ -452,23 +470,6 @@ end
 ------------------------------------------------
 -- UPNP actions Sequence
 ------------------------------------------------
-local function updateCommStatus(lul_device,success)
-	if( luup.version_branch == 1 and luup.version_major == 7) then
-		if (success == true) then
-			luup.set_failure(0,lul_device)  -- should be 0 in UI7
-		else
-			luup.set_failure(1,lul_device)  -- should be 0 in UI7
-		end
-	else
-		luup.set_failure(false,lul_device)	-- should be 0 in UI7
-	end
-	if (success==false) then
-		retry_timer = math.min( 2*retry_timer, 60 )
-	else
-		retry_timer=1
-	end
-end
-
 function isOnline(lul_device)
 	debug(string.format("isOnline(%s)",lul_device))
 	local result = false
@@ -479,7 +480,7 @@ function isOnline(lul_device)
 	else
 		UserMessage("please add ip address in the ip attribute and reload "..lul_device,TASK_ERROR_PERM)
 	end
-	updateCommStatus(lul_device,result)
+	updateDevice(lul_device,result)
 	luup.call_delay("isOnline", 60 * retry_timer, lul_device)
 	return result
 end
@@ -530,9 +531,6 @@ function startupDeferred(lul_device)
 
 	local success = startEngine(lul_device)
 	updateDevice(lul_device,success)
-	
-	-- report success or failure
-	updateCommStatus(lul_device,success)
 
 	log("startup completed")
 end
