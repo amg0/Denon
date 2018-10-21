@@ -9,26 +9,36 @@
 local MSG_CLASS		= "DENON"
 local DENON_SERVICE	= "urn:upnp-org:serviceId:altdenon1"
 local POWER_SERVICE	= "urn:upnp-org:serviceId:SwitchPower1"
-
 local devicetype	= "urn:schemas-upnp-org:device:altdenon:1"
--- local this_device	= nil
 local DEBUG_MODE	= false -- controlled by UPNP action
-local version		= "v0.6"
+local version		= "v0.61"
 local JSON_FILE = "D_DENON.json"
 local UI7_JSON_FILE = "D_DENON_UI7.json"
-
-local json = require("dkjson")
--- local mime = require('mime')
-local socket = require("socket")
--- local http = require("socket.http")
--- local https = require ("ssl.https")
--- local ltn12 = require("ltn12")
-local modurl = require ("socket.url")
-
-local ampli = nil
 local this_device = nil
 local retry_timer = 1/2			-- in mn, retry time
-	
+local json = require("dkjson")
+local socket = require("socket")
+local modurl = require ("socket.url")
+
+local sources = {
+	{id="bd", label="BD", cmd="BD"},
+	{id="cd", label="CD", cmd="CD"},
+	{id="cbl", label="CBL/SAT", cmd="SAT/CBL"},
+	{id="dvd", label="DVD", cmd="DVD"},
+	{id="dvr", label="DVR", cmd="DVR"},
+	{id="favorites", label="FAVORITES", cmd="FAVORITES"},
+	{id="net", label="NET/USB", cmd="NET/USB"},
+	{id="game", label="GAME", cmd="GAME"},
+	{id="iradio", label="IRADIO", cmd="IRADIO"},
+	{id="mplay", label="MPLAYER", cmd="MPLAY"},
+	{id="phono", label="PHONO", cmd="PHONO"},
+	{id="server", label="SERVER", cmd="SERVER"},
+	{id="tuner", label="TUNER", cmd="TUNER"},
+	{id="tv", label="TV", cmd="TV"},
+	{id="vcr", label="VCR", cmd="VCR"}
+}
+
+			
 ------------------------------------------------
 -- Debug --
 ------------------------------------------------
@@ -383,6 +393,53 @@ local function setDebugMode(lul_device,newDebugMode)
   end
 end
 
+------------------------------------------------------------------------------------------------
+-- Http handlers : Communication FROM ALTUI
+-- http://192.168.1.5:3480/data_request?id=lr_ALTUI_Handler&command=xxx
+-- recommended settings in ALTUI: PATH = /data_request?id=lr_ALTUI_Handler&mac=$M&deviceID=114
+------------------------------------------------------------------------------------------------
+function switch( command, actiontable)
+	-- check if it is in the table, otherwise call default
+	if ( actiontable[command]~=nil ) then
+		return actiontable[command]
+	end
+	log("myDENON_Handler:Unknown command received:"..command.." was called. Default function")
+	return actiontable["default"]
+end
+
+function myDENON_Handler(lul_request, lul_parameters, lul_outputformat)
+	debug(string.format('myDENON_Handler: request is: %s parameters:%s' , tostring(lul_request),json.encode(lul_parameters)))
+	local command = nil
+	local lul_html,mime_type = nil,nil
+	
+	local lul_device = this_device or tonumber(lul_parameters["DeviceNum"] or 0)
+	
+	-- find a parameter called "command"
+	if ( lul_parameters["command"] ~= nil ) then
+		command =lul_parameters["command"]
+	else
+		debug("ALTUI_Handler:no command specified, taking default")
+		command ="default"
+	end
+
+	-- switch table
+	local action = {
+		["GetSources"] =
+			function(params)
+				return json.encode({ ["sources"]=sources }), "application/json"
+			end,
+		["default"] =
+			function(params)
+				return "not successful", "text/plain"
+			end
+	}
+	
+	-- actual call
+	lul_html , mime_type = switch(command,action)(lul_parameters)
+	debug(string.format("lul_html:%s",lul_html or ""))
+	return (lul_html or "") , mime_type
+end
+
 -------------------------------------------------
 --- connect
 --- send multiple commands separated by , ( CSV )
@@ -492,6 +549,9 @@ local function startEngine(lul_device)
 	return isOnline(lul_device)
 end
 
+function registerHandlers(lul_device)
+	luup.register_handler("myDENON_Handler","DENON_Handler")
+end
 
 function startupDeferred(lul_device)
 	log("startupDeferred, called on behalf of device:"..lul_device)
@@ -529,6 +589,8 @@ function startupDeferred(lul_device)
 		luup.variable_set(DENON_SERVICE, "Version", version, lul_device)
 	end
 
+	registerHandlers(lul_device)
+	
 	local success = startEngine(lul_device)
 	updateDevice(lul_device,success)
 

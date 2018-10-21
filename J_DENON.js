@@ -91,26 +91,28 @@ var DENON = (function(api,$) {
 			return ip_address
 		}
 		function _drawsources(deviceID,item){
-			var sources = [
-				{id:"bd", label:"BD", cmd:"BD"},
-				{id:"cd", label:"CD", cmd:"CD"},
-				{id:"cbl", label:"CBL/SAT", cmd:"SAT/CBL"},
-				{id:"dvd", label:"DVD", cmd:"DVD"},
-				{id:"dvr", label:"DVR", cmd:"DVR"},
-				{id:"favorites", label:"FAVORITES", cmd:"FAVORITES"},
-				{id:"net", label:"NET/USB", cmd:"NET/USB"},
-				{id:"game", label:"GAME", cmd:"GAME"},
-				{id:"iradio", label:"IRADIO", cmd:"IRADIO"},
-				{id:"mplay", label:"MPLAYER", cmd:"MPLAY"},
-				{id:"phono", label:"PHONO", cmd:"PHONO"},
-				{id:"server", label:"SERVER", cmd:"SERVER"},
-				{id:"tuner", label:"TUNER", cmd:"TUNER"},
-				{id:"tv", label:"TV", cmd:"TV"},
-				{id:"vcr", label:"VCR", cmd:"VCR"},
-			];
+			var testurl = buildHandlerUrl(deviceID,"GetSources",null);
+			
+			// var sources = [
+				// {id:"bd", label:"BD", cmd:"BD"},
+				// {id:"cd", label:"CD", cmd:"CD"},
+				// {id:"cbl", label:"CBL/SAT", cmd:"SAT/CBL"},
+				// {id:"dvd", label:"DVD", cmd:"DVD"},
+				// {id:"dvr", label:"DVR", cmd:"DVR"},
+				// {id:"favorites", label:"FAVORITES", cmd:"FAVORITES"},
+				// {id:"net", label:"NET/USB", cmd:"NET/USB"},
+				// {id:"game", label:"GAME", cmd:"GAME"},
+				// {id:"iradio", label:"IRADIO", cmd:"IRADIO"},
+				// {id:"mplay", label:"MPLAYER", cmd:"MPLAY"},
+				// {id:"phono", label:"PHONO", cmd:"PHONO"},
+				// {id:"server", label:"SERVER", cmd:"SERVER"},
+				// {id:"tuner", label:"TUNER", cmd:"TUNER"},
+				// {id:"tv", label:"TV", cmd:"TV"},
+				// {id:"vcr", label:"VCR", cmd:"VCR"},
+			// ];
 			var html = '<select id="altdenon-selectsrc">'
 			html += '<option value="select">Select source</option>'
-			jQuery.each(sources, function(i,src) {
+			jQuery.each(item.data, function(i,src) {
 				html += format('<option value="{0}" data-cmd="{2}">{1}</option>',src.id,src.label,src.cmd)
 			})
 			html += '</select>';
@@ -120,28 +122,33 @@ var DENON = (function(api,$) {
 			var result = get_device_state(deviceID,  DENON_Svs, 'LastResult',1);
 			return result
 		}
-		var tbl = [
-			{ label:"IP Addr : " , func:_drawip},
-			{ label:"Source Input :" , func:_drawsources},
-			{ label:"Last Message :",func:_drawlastmsg },
-		]
-		var lines = []
-		jQuery.each(tbl, function(i,item) {
-			var cell = (item.func)(deviceID,item)
-			lines.push( format("<tr><td>{0}</td><td>{1}</td></tr>", item.label , cell ))
-		});
 		
-		html += format(`
-			<table class="table table-bordered table-hover table-sm">
-			  <tbody>
-			  {0}
-			  </tbody>
-			</table>`,lines.join("") ) ;
-		((DENON_myapi) ? (DENON_myapi.setCpanelContent) : (set_panel_html)) (html)
-		jQuery("#cpanel_after_init_container").on("change", "#altdenon-selectsrc", function(e) {
-			var cmd = "SI"+jQuery("#altdenon-selectsrc option:selected").data("cmd")
-			jQuery.get( buildUPnPActionUrl(deviceID,DENON_Svs,"SendCmd",{newCmd:cmd}) )
-		});
+		function _displaySettings(sources) {
+			var tbl = [
+				{ label:"IP Addr : " , func:_drawip, data:null},
+				{ label:"Source Input :" , func:_drawsources , data:sources},
+				{ label:"Last Message :",func:_drawlastmsg, data:null },
+			]
+			var lines = []
+			jQuery.each(tbl, function(i,item) {
+				var cell = (item.func)(deviceID,item)
+				lines.push( format("<tr><td>{0}</td><td>{1}</td></tr>", item.label , cell ))
+			});
+			
+			html += format(`
+				<table class="table table-bordered table-hover table-sm">
+				  <tbody>
+				  {0}
+				  </tbody>
+				</table>`,lines.join("") ) ;
+			((DENON_myapi) ? (DENON_myapi.setCpanelContent) : (set_panel_html)) (html)
+			jQuery("#cpanel_after_init_container").on("change", "#altdenon-selectsrc", function(e) {
+				var cmd = "SI"+jQuery("#altdenon-selectsrc option:selected").data("cmd")
+				jQuery.get( buildUPnPActionUrl(deviceID,DENON_Svs,"SendCmd",{newCmd:cmd}) )
+			});
+		}
+		
+		$.get( buildHandlerUrl(deviceID,"GetSources",null) ,function(data) { _displaySettings(data.sources) } ) 
 	};
 	
 	//-------------------------------------------------------------
