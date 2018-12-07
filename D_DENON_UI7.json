@@ -313,7 +313,47 @@
   "eventList":{
   },
   "eventList2": [
-	],
+	{
+	  "id": 1,
+	  "label": {
+		"lang_tag": "a_device_is_on_or_off",
+		"text": "A device is on or off"
+	  },
+	  "serviceId": "urn:upnp-org:serviceId:SwitchPower1",
+	  "norepeat": "1",
+	  "argumentList": [
+		{
+		  "id": 1,
+		  "dataType": "boolean",
+		  "defaultValue": "1",
+		  "allowedValueList": [
+			{
+			  "Off": "0",
+			  "HumanFriendlyText": {
+				"lang_tag": "hft_device_off",
+				"text": "_DEVICE_NAME_ is off"
+			  }
+			},
+			{
+			  "On": "1",
+			  "HumanFriendlyText": {
+				"lang_tag": "hft_device_on",
+				"text": "_DEVICE_NAME_ is on"
+			  }
+			}
+		  ],
+		  "name": "Status",
+		  "comparisson": "=",
+		  "prefix": {
+			"lang_tag": "which_mode",
+			"text": "Which mode"
+		  },
+		  "suffix": {
+		  }
+		}
+	  ]
+	}
+  ],
   "DeviceType": "urn:schemas-upnp-org:device:altdenon:1",
   "device_type": "urn:schemas-upnp-org:device:altdenon:1"
 }

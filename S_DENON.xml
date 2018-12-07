@@ -23,6 +23,12 @@
             <defaultValue>1</defaultValue>
             <shortCode>muteon</shortCode>
         </stateVariable>
+        <stateVariable sendEvents="yes">
+            <name>Status</name>
+            <dataType>ui2</dataType>
+            <defaultValue></defaultValue>
+            <shortCode>status</shortCode>
+        </stateVariable>
 	</serviceStateTable>
     <actionList>
         <action>
