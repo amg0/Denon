@@ -11,7 +11,7 @@ local DENON_SERVICE	= "urn:upnp-org:serviceId:altdenon1"
 local POWER_SERVICE	= "urn:upnp-org:serviceId:SwitchPower1"
 local devicetype	= "urn:schemas-upnp-org:device:altdenon:1"
 local DEBUG_MODE	= false -- controlled by UPNP action
-local version		= "v0.62"
+local version		= "v0.63"
 local JSON_FILE = "D_DENON.json"
 local UI7_JSON_FILE = "D_DENON_UI7.json"
 local this_device = nil
@@ -26,6 +26,7 @@ local sources = {
 	{id="cbl", label="CBL/SAT", cmd="SAT/CBL"},
 	{id="dvd", label="DVD", cmd="DVD"},
 	{id="dvr", label="DVR", cmd="DVR"},
+	{id="dock", label="DOCK", cmd="DOCK"},
 	{id="favorites", label="FAVORITES", cmd="FAVORITES"},
 	{id="net", label="NET/USB", cmd="NET/USB"},
 	{id="game", label="GAME", cmd="GAME"},

@@ -142,7 +142,7 @@ var DENON = (function(api,$) {
 				  </tbody>
 				</table>`,lines.join("") ) ;
 			((DENON_myapi) ? (DENON_myapi.setCpanelContent) : (set_panel_html)) (html)
-			jQuery("#cpanel_after_init_container").on("change", "#altdenon-selectsrc", function(e) {
+			jQuery("#cpanel_after_init_container").off("change").on("change", "#altdenon-selectsrc", function(e) {
 				var cmd = "SI"+jQuery("#altdenon-selectsrc option:selected").data("cmd")
 				jQuery.get( buildUPnPActionUrl(deviceID,DENON_Svs,"SendCmd",{newCmd:cmd}) )
 			});
